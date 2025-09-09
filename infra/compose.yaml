@@ -1,0 +1,112 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: learnova
+      POSTGRES_USER: learnova
+      POSTGRES_PASSWORD: learnova
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant:/qdrant/storage
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    env_file:
+      - ../backend/.env
+    environment:
+      - GOOGLE_CLIENT_ID=900600197384-058karbmlk0ar44b1h4nglfujstqg1pa.apps.googleusercontent.com
+    volumes:
+      - uploads:/data/uploads
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read(); print('ok')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: ["bash", "-lc", "celery -A app.workers.celery_app worker --loglevel=info"]
+    env_file:
+      - ../backend/.env
+    environment:
+      - GOOGLE_CLIENT_ID=900600197384-058karbmlk0ar44b1h4nglfujstqg1pa.apps.googleusercontent.com
+    volumes:
+      - uploads:/data/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.socket(); s.settimeout(2); s.connect(('rabbitmq', 5672)); print('ok')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=900600197384-058karbmlk0ar44b1h4nglfujstqg1pa.apps.googleusercontent.com
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(()=>process.exit(0)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  qdrant:
+  uploads:

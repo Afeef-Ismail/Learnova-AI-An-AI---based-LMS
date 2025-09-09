@@ -1,0 +1,62 @@
+:root{
+  /* Dark theme base (slate + violet/indigo) */
+  --bg:#0b1120; /* slate-950 */
+  --card:#111827e6; /* slate-900 with slight alpha */
+  --text:#e5e7eb; /* gray-200 */
+  --muted:#94a3b8; /* slate-400 */
+  --primary:#7c3aed; /* violet-600 */
+  --primary-foreground:#ffffff;
+  --accent:#22d3ee; /* cyan-400 */
+  --flip-h: 180px; /* base flip height */
+}
+
+:root.light{
+  /* Light theme base (stone + violet/indigo accents) */
+  --bg:#f8fafc; /* slate-50 */
+  --card:#ffffff;
+  --text:#0f172a; /* slate-900 */
+  --muted:#475569; /* slate-600 */
+  --primary:#6d28d9; /* violet-700 */
+  --primary-foreground:#ffffff;
+  --accent:#0ea5e9; /* sky-500 */
+  --flip-h: 180px;
+}
+
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Tailwind base */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Utilities */
+.container{ @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 }
+.btn{
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-primary focus:ring-opacity-50;
+}
+.btn-primary{ @apply bg-primary text-white hover:brightness-110 }
+.btn-outline{ @apply border border-white/20 hover:bg-white/5 }
+.card{ @apply bg-card bg-opacity-80 backdrop-blur rounded-xl shadow-card border border-white/10 }
+
+.sidebar-link{ @apply flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-white/10 hover:text-white transition-colors }
+.sidebar-link.active{ @apply bg-white/10 text-white }
+
+/* Flip card */
+.flip-card{ position: relative; width: 100%; cursor: pointer; user-select: none; perspective: 1000px; min-height: var(--flip-h); }
+.flip-inner{ position: relative; width: 100%; height: var(--flip-h); transform-style: preserve-3d; transition: transform 0.6s; }
+.flip-inner.flipped{ transform: rotateY(180deg); }
+.flip-front, .flip-back{ position: absolute; inset: 0; height: var(--flip-h); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-back{ transform: rotateY(180deg); }
+
+/* Responsive heights for more room on larger screens */
+@media (min-width: 768px){
+  :root{ --flip-h: 220px; }
+}
+@media (min-width: 1024px){
+  :root{ --flip-h: 260px; }
+}

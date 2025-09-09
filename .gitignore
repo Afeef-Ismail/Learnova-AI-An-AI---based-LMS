@@ -1,0 +1,70 @@
+# Root ignores
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# VS Code
+.vscode/
+.history/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.py,cover
+.coverage*
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.hypothesis/
+.venv/
+venv/
+.env
+
+# Node / Next.js
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+.next/
+out/
+.turbo/
+.npmrc
+pnpm-lock.yaml
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build artifacts
+build/
+dist/
+coverage/
+*.egg-info/
+.eggs/
+
+# Docker
+**/.docker/
+**/.cache/
+
+# Project specific
+backend/app/__pycache__/
+backend/.ruff_cache/
+backend/.pytest_cache/
+backend/.mypy_cache/
+
+# Environment files (examples allowed)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env
