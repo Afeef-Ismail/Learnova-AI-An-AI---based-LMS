@@ -68,3 +68,4 @@ backend/.mypy_cache/
 .env.production.local
 backend/.env
 frontend/.env
+infra/.env
