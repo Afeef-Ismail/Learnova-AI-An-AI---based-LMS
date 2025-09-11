@@ -20,6 +20,7 @@ const links = [
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const isAuthPage = pathname === '/login' || pathname === '/signup'
   // Use SSR-safe defaults; sync from localStorage after mount to avoid hydration mismatch
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [user, setUser] = useState<{ name?: string; email?: string } | null>(null)
@@ -130,68 +131,75 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
         <SWRConfig value={{ fetcher: (url: string) => fetch(url).then(r=>r.json()), revalidateOnFocus: false, dedupingInterval: 1500 }}>
         <ToastProvider>
-        <div className="min-h-screen flex">
-          <aside className={`${sidebarOpen ? 'w-64' : 'w-14 md:w-14'} p-3 border-r border-white/10 bg-card bg-opacity-50 backdrop-blur transition-all duration-200 overflow-hidden`}>
-            <div className="flex items-center gap-2 mb-6">
-              <button
-                className="w-10 h-10 flex items-center justify-center rounded hover:bg-white/10"
-                onClick={()=>setSidebarOpen(v=>!v)}
-                aria-label="Toggle sidebar"
-                title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-              >
-                <Bars3Icon className="w-6 h-6 shrink-0" />
-              </button>
-              {sidebarOpen && <div className="text-2xl font-bold">Learnova</div>}
-            </div>
-            <nav className="space-y-1">
-              {links.map(l => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={clsx(
-                    'sidebar-link',
-                    sidebarOpen ? 'flex pl-1 pr-3 py-2 gap-2' : 'flex w-10 h-10 items-center justify-center',
-                    pathname === l.href && 'active'
-                  )}
-                >
-                  <span className={clsx('inline-flex items-center justify-center shrink-0', sidebarOpen ? 'w-8 h-8' : 'w-6 h-6') }>
-                    <l.icon className="w-6 h-6 shrink-0" />
-                  </span>
-                  {sidebarOpen && <span>{l.label}</span>}
-                </Link>
-              ))}
-            </nav>
-            {/* Theme toggle moved to Settings page */}
-          </aside>
-          <main className="flex-1">
-            {/* Topbar with search (left) and user menu (right) */}
-            <div className="flex items-center justify-between gap-3 p-3 border-b border-white/10 bg-card bg-opacity-30 backdrop-blur sticky top-0 z-40">
-              <form className="hidden md:flex items-center bg-white/5 rounded-full px-3 py-2 w-[420px] border border-white/10">
-                <input className="bg-transparent outline-none flex-1 text-sm" placeholder="Search courses, topics, or anything..." />
-              </form>
-              {user && (
-                <div className="relative" ref={menuRef}>
-                  <button
-                    aria-label="User menu"
-                    className="w-9 h-9 rounded-full bg-blue-500/30 border border-white/20 flex items-center justify-center text-sm font-semibold hover:bg-blue-500/40"
-                    onClick={(e)=>{ e.stopPropagation(); setMenuOpen(v=>!v) }}
-                    title={user.email}
-                  >
-                    {initials(user.name)}
-                  </button>
-                  {menuOpen && (
-                    <div className="absolute right-0 mt-2 w-44 rounded-md border border-white/10 bg-card shadow-lg z-50">
-                      <Link href="/profile" className="block px-3 py-2 text-sm hover:bg-white/10">Profile</Link>
-                      <Link href="/settings" className="block px-3 py-2 text-sm hover:bg-white/10">Settings</Link>
-                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-white/10" onClick={signOut}>Sign out</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+        {isAuthPage ? (
+          // Minimal layout on auth pages: no sidebar or topbar
+          <main className="min-h-screen">
             {children}
           </main>
-        </div>
+        ) : (
+          <div className="min-h-screen flex">
+            <aside className={`${sidebarOpen ? 'w-64' : 'w-14 md:w-14'} p-3 border-r border-white/10 bg-card bg-opacity-50 backdrop-blur transition-all duration-200 overflow-hidden`}>
+              <div className="flex items-center gap-2 mb-6">
+                <button
+                  className="w-10 h-10 flex items-center justify-center rounded hover:bg-white/10"
+                  onClick={()=>setSidebarOpen(v=>!v)}
+                  aria-label="Toggle sidebar"
+                  title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                >
+                  <Bars3Icon className="w-6 h-6 shrink-0" />
+                </button>
+                {sidebarOpen && <div className="text-2xl font-bold">Learnova</div>}
+              </div>
+              <nav className="space-y-1">
+                {links.map(l => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={clsx(
+                      'sidebar-link',
+                      sidebarOpen ? 'flex pl-1 pr-3 py-2 gap-2' : 'flex w-10 h-10 items-center justify-center',
+                      pathname === l.href && 'active'
+                    )}
+                  >
+                    <span className={clsx('inline-flex items-center justify-center shrink-0', sidebarOpen ? 'w-8 h-8' : 'w-6 h-6') }>
+                      <l.icon className="w-6 h-6 shrink-0" />
+                    </span>
+                    {sidebarOpen && <span>{l.label}</span>}
+                  </Link>
+                ))}
+              </nav>
+              {/* Theme toggle moved to Settings page */}
+            </aside>
+            <main className="flex-1">
+              {/* Topbar with search (left) and user menu (right) */}
+              <div className="flex items-center justify-between gap-3 p-3 border-b border-white/10 bg-card bg-opacity-30 backdrop-blur sticky top-0 z-40">
+                <form className="hidden md:flex items-center bg-white/5 rounded-full px-3 py-2 w-[420px] border border-white/10">
+                  <input className="bg-transparent outline-none flex-1 text-sm" placeholder="Search courses, topics, or anything..." />
+                </form>
+                {user && (
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      aria-label="User menu"
+                      className="w-9 h-9 rounded-full bg-blue-500/30 border border-white/20 flex items-center justify-center text-sm font-semibold hover:bg-blue-500/40"
+                      onClick={(e)=>{ e.stopPropagation(); setMenuOpen(v=>!v) }}
+                      title={user.email}
+                    >
+                      {initials(user.name)}
+                    </button>
+                    {menuOpen && (
+                      <div className="absolute right-0 mt-2 w-44 rounded-md border border-white/10 bg-card shadow-lg z-50">
+                        <Link href="/profile" className="block px-3 py-2 text-sm hover:bg-white/10">Profile</Link>
+                        <Link href="/settings" className="block px-3 py-2 text-sm hover:bg-white/10">Settings</Link>
+                        <button className="w-full text-left px-3 py-2 text-sm hover:bg-white/10" onClick={signOut}>Sign out</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {children}
+            </main>
+          </div>
+        )}
         </ToastProvider>
         </SWRConfig>
       </body>
