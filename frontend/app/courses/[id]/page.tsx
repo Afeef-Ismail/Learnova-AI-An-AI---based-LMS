@@ -205,14 +205,14 @@ export default function CourseDetail(){
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-white/10">
+  <div className="flex gap-2 border-b border-white/10">
         {tabs.map(t => {
           const count = t.key === 'materials' ? ((files?.items || []).length) : t.key === 'youtube' ? ((yt?.items || []).length) : null
           return (
-            <button key={t.key} className={`px-3 py-2 ${tab===t.key? 'border-b-2 border-primary text-white' : 'text-muted'}`} onClick={()=>setTab(t.key)}>
+    <button key={t.key} className={`course-tab ${tab===t.key ? 'active' : ''}`} onClick={()=>setTab(t.key)}>
               {t.label}
               {typeof count === 'number' && count > 0 && (
-                <span className="ml-2 text-xs bg-white/10 rounded-full px-2 py-0.5">{count}</span>
+        <span className="tab-count ml-2 text-xs bg-white/10 rounded-full px-2 py-0.5">{count}</span>
               )}
             </button>
           )
@@ -432,6 +432,13 @@ function CourseChat({ courseId }: { courseId: string }){
   setHistory(h => [{ q: input, a: `Error: ${e.message||e}`, t: new Date().toISOString(), open: true }, ...h.map(i => ({...i, open: false}))])
     }finally{ setLoading(false) }
   }
+  async function removeItem(itemId: number){
+    try{
+      await apiDelete(`/chat/history?course_id=${encodeURIComponent(courseId)}&id=${itemId}`)
+      // Update local state quickly without full refetch
+      setHistory(list => list.filter(it => it.id !== itemId))
+    }catch{}
+  }
   return (
     <div className="card p-4 space-y-4">
       {/* Ask at top */}
@@ -442,7 +449,7 @@ function CourseChat({ courseId }: { courseId: string }){
 
       {/* History as dropdown/accordion */}
       <div className="space-y-2 max-h-[460px] overflow-auto pr-1">
-        {history.slice(0, visible).map((h,i) => {
+  {history.slice(0, visible).map((h,i) => {
           const key = `${h.t}-${i}`
           return (
             <details key={key} className="bg-white/5 rounded-lg" open={!!h.open} onClick={(e)=>{
@@ -456,11 +463,20 @@ function CourseChat({ courseId }: { courseId: string }){
               <div className="px-3 pb-3 pt-1 relative">
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-xs text-muted">Answer</div>
-                  <button
-                    className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20"
-                    onClick={async (e)=>{ e.preventDefault(); e.stopPropagation(); try{ await navigator.clipboard.writeText(h.a||'') }catch{} }}
-                    title="Copy answer"
-                  >Copy</button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20"
+                      onClick={async (e)=>{ e.preventDefault(); e.stopPropagation(); try{ await navigator.clipboard.writeText(h.a||'') }catch{} }}
+                      title="Copy answer"
+                    >Copy</button>
+                    {!!h.id && (
+                      <button
+                        className="text-[11px] px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-300"
+                        onClick={async (e)=>{ e.preventDefault(); e.stopPropagation(); const ok=confirm('Delete this chat?'); if(!ok) return; await removeItem(h.id as number); }}
+                        title="Delete chat"
+                      >Delete</button>
+                    )}
+                  </div>
                 </div>
                 <div className="whitespace-pre-wrap text-sm">{h.a}</div>
               </div>

@@ -258,7 +258,7 @@ export default function ChatPage(){
               {chats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <button className="btn btn-outline" onClick={renameCurrent} disabled={!currentId}>Rename</button>
-            <button className="btn btn-outline" onClick={() => {
+            <button className="btn bg-red-600 text-white hover:bg-red-500" onClick={() => {
               abortRef.current?.abort()
               setChats(prev => {
                 const filtered = prev.filter(c => c.id !== currentId)

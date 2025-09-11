@@ -10,7 +10,7 @@ from ..models.db_models import Course, Flashcard
 from ..services.ollama import generate as ollama_generate
 from ..services.qdrant import fetch_texts_by_course
 
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "llama3:8b")
+DEFAULT_MODEL = os.getenv("LLM_MODEL", "llama3.2:3b")
 
 GEN_PROMPT = (
     "You are to generate flashcards for spaced repetition. Return ONLY strict JSON array where each item has keys: "

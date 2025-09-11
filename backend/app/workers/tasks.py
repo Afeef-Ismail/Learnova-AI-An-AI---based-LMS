@@ -14,7 +14,7 @@ def ingest_youtube_task(self, url: str, course_id: str, model: str | None = None
     ing = _run(ingest_youtube_url(url=url, course_id=course_id))
     out: Dict[str, Any] = {"task": "ingest_youtube", "course_id": course_id, "ingestion": ing}
     if summarize:
-        use_model = model or os.getenv("LLM_MODEL", "llama3:8b")
+        use_model = model or os.getenv("LLM_MODEL", "llama3.2:3b")
         summ = _run(summarize_course_async(course_id=course_id, model=use_model))
         out["summary"] = summ
     return out
@@ -22,6 +22,6 @@ def ingest_youtube_task(self, url: str, course_id: str, model: str | None = None
 
 @celery_app.task(name="workers.summarize_course", bind=True)
 def summarize_course_task(self, course_id: str, model: str | None = None) -> Dict[str, Any]:
-    use_model = model or os.getenv("LLM_MODEL", "llama3:8b")
+    use_model = model or os.getenv("LLM_MODEL", "llama3.2:3b")
     summ = _run(summarize_course_async(course_id=course_id, model=use_model))
     return {"task": "summarize_course", "course_id": course_id, "summary": summ}

@@ -37,6 +37,15 @@ services:
       - qdrant:/qdrant/storage
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    # Default command runs the Ollama server
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+
   backend:
     build:
       context: ../backend
@@ -44,7 +53,9 @@ services:
     env_file:
       - ../backend/.env
     environment:
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_ID=900600197384-058karbmlk0ar44b1h4nglfujstqg1pa.apps.googleusercontent.com
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - FRONTEND_ORIGIN=http://localhost:3001
     volumes:
       - uploads:/data/uploads
     ports:
@@ -61,6 +72,8 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      ollama:
+        condition: service_started
     restart: unless-stopped
 
   worker:
@@ -71,7 +84,8 @@ services:
     env_file:
       - ../backend/.env
     environment:
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_ID=900600197384-058karbmlk0ar44b1h4nglfujstqg1pa.apps.googleusercontent.com
+      - OLLAMA_HOST=http://host.docker.internal:11434
     volumes:
       - uploads:/data/uploads
     healthcheck:
@@ -86,6 +100,8 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      ollama:
+        condition: service_started
     restart: unless-stopped
 
   frontend:
@@ -95,7 +111,8 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=900600197384-058karbmlk0ar44b1h4nglfujstqg1pa.apps.googleusercontent.com
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(()=>process.exit(0)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -110,3 +127,4 @@ volumes:
   pgdata:
   qdrant:
   uploads:
+  ollama:

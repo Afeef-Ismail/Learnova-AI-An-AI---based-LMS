@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SUMMARY_MODEL = os.getenv("SUMMARY_MODEL", os.getenv("LLM_MODEL", "llama3:8b"))
+DEFAULT_SUMMARY_MODEL = os.getenv("SUMMARY_MODEL", os.getenv("LLM_MODEL", "llama3.2:3b"))
 
 # Tunable summarization parameters
 SUMMARY_MAX_TOTAL_CHARS = 16000        # Hard cap of total characters fed into map stage

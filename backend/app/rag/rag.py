@@ -4,7 +4,7 @@ from ..services.qdrant import search as qdrant_search, fetch_course_summary
 from ..services.ollama import generate as ollama_generate
 from ..services.reranker import rerank as rr_rerank, is_enabled as rr_enabled
 
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "llama3:8b")
+DEFAULT_MODEL = os.getenv("LLM_MODEL", "llama3.2:3b")
 
 
 def _build_prompt(question: str, contexts: List[Dict[str, Any]], summary: str | None = None) -> str:

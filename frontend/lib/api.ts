@@ -1,5 +1,8 @@
-// Read from runtime public env when available, otherwise fallback
-export const API_BASE = (typeof window !== 'undefined' && (window as any).NEXT_PUBLIC_API_BASE) || 'http://localhost:8000';
+// Prefer build-time env (Next.js exposes NEXT_PUBLIC_* at build), then runtime window override, then fallback
+export const API_BASE =
+  (process.env.NEXT_PUBLIC_API_BASE as string | undefined) ||
+  (typeof window !== 'undefined' && (window as any).NEXT_PUBLIC_API_BASE) ||
+  'http://localhost:8000';
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};

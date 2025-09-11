@@ -12,10 +12,10 @@
 
 :root.light{
   /* Light theme base (stone + violet/indigo accents) */
-  --bg:#f8fafc; /* slate-50 */
-  --card:#ffffff;
+  --bg:#f5f7fb; /* subtle off-white */
+  --card:#ffffff; /* crisp cards */
   --text:#0f172a; /* slate-900 */
-  --muted:#475569; /* slate-600 */
+  --muted:#334155; /* slate-700 for better contrast */
   --primary:#6d28d9; /* violet-700 */
   --primary-foreground:#ffffff;
   --accent:#0ea5e9; /* sky-500 */
@@ -28,6 +28,64 @@ body{
   background:var(--bg);
   color:var(--text);
 }
+
+/* Light mode polish: subtle gradients and clearer borders */
+.light body{
+  background: radial-gradient(1200px 600px at 0% -10%, #ffffff 0%, var(--bg) 40%, #eef2f7 100%);
+}
+.light .card{
+  background: var(--card);
+  border-color: rgba(15,23,42,0.08);
+  box-shadow: 0 6px 24px rgba(2,6,23,0.06);
+}
+.light .btn-outline{
+  border-color: rgba(15,23,42,0.15);
+}
+.light .sidebar-link{
+  color: #334155; /* slate-700 */
+}
+.light .sidebar-link:hover{
+  background: rgba(2,6,23,0.04);
+  color: #0f172a; /* slate-900 */
+}
+.light .sidebar-link.active{
+  background: rgba(99,102,241,0.12); /* violet tint */
+  color: #1f2937; /* slate-800 */
+}
+
+/* Light mode – clearer outlines for form controls */
+.light input[type="text"],
+.light input[type="email"],
+.light input[type="password"],
+.light input[type="search"],
+.light input[type="url"],
+.light input[type="number"],
+.light input[type="file"],
+.light textarea,
+.light select{
+  border: 1px solid rgba(15,23,42,0.15) !important; /* slate-900 at 15% */
+  background: #ffffff;
+  color: var(--text);
+  border-radius: 0.5rem;
+}
+.light input::placeholder,
+.light textarea::placeholder{ color: rgba(15,23,42,0.4); }
+.light input:focus,
+.light textarea:focus,
+.light select:focus{
+  border-color: rgba(99,102,241,0.5); /* violet */
+  outline: 2px solid rgba(99,102,241,0.35);
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+/* Strengthen faint utility borders/backgrounds in light mode */
+.light [class*="border-white/10"],
+.light [class*="border-white/20"]{ border-color: rgba(15,23,42,0.12) !important; }
+.light [class*="bg-white/5"]{ background-color: rgba(2,6,23,0.03) !important; }
+
+/* Details/accordion panels – add visible border */
+.light details{ border: 1px solid rgba(15,23,42,0.08); background: #ffffff; }
 
 /* Tailwind base */
 @tailwind base;
@@ -43,8 +101,23 @@ body{
 .btn-outline{ @apply border border-white/20 hover:bg-white/5 }
 .card{ @apply bg-card bg-opacity-80 backdrop-blur rounded-xl shadow-card border border-white/10 }
 
-.sidebar-link{ @apply flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-white/10 hover:text-white transition-colors }
+.sidebar-link{ @apply items-center rounded-lg text-sm text-slate-300 hover:bg-white/10 hover:text-white transition-colors }
 .sidebar-link.active{ @apply bg-white/10 text-white }
+
+/* Left active indicator */
+.sidebar-link{ position: relative; }
+.sidebar-link.active::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10%;
+  bottom: 10%;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--primary);
+  opacity: 0.9;
+}
+.light .sidebar-link.active::before{ background: #6d28d9; }
 
 /* Flip card */
 .flip-card{ position: relative; width: 100%; cursor: pointer; user-select: none; perspective: 1000px; min-height: var(--flip-h); }
@@ -60,3 +133,12 @@ body{
 @media (min-width: 1024px){
   :root{ --flip-h: 260px; }
 }
+
+/* Course detail tabs */
+.course-tab{ padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #cbd5e1; border-bottom: 2px solid transparent; }
+.course-tab.active{ border-bottom-color: var(--primary); color: #ffffff; }
+.light .course-tab{ color: #475569; /* slate-600 */ }
+.light .course-tab.active{ color: #0f172a; /* slate-900 */ border-color: #6d28d9; }
+.course-tab .tab-count{ font-size: 11px; }
+.light .course-tab .tab-count{ background: rgba(2,6,23,0.08); color: #0f172a; }
+.light .course-tab.active .tab-count{ background: rgba(99,102,241,0.20); color: #0f172a; }

@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from ..models.db_models import Course, MCQQuestion, MCQAttempt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "llama3:8b")
+DEFAULT_MODEL = os.getenv("LLM_MODEL", "llama3.2:3b")
 
 # In-memory session store (per course) for answered correct question IDs to avoid repetition
 _ANSWERED_CORRECT: Dict[str, set] = {}

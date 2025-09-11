@@ -4,7 +4,7 @@ import './globals.css'
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { HomeIcon, BookOpenIcon, FolderPlusIcon, ChatBubbleLeftRightIcon, Squares2X2Icon, QuestionMarkCircleIcon, RectangleStackIcon } from '@heroicons/react/24/outline'
+import { HomeIcon, BookOpenIcon, FolderPlusIcon, ChatBubbleLeftRightIcon, Squares2X2Icon, Bars3Icon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import { ToastProvider } from '../components/Toaster'
 import { SWRConfig } from 'swr'
@@ -15,30 +15,35 @@ const links = [
   { href: '/browse', label: 'Browse', icon: Squares2X2Icon },
   { href: '/upload', label: 'Upload Material', icon: FolderPlusIcon },
   { href: '/chat', label: 'Edu Chatbot', icon: ChatBubbleLeftRightIcon },
-  { href: '/summarize', label: 'Summarize', icon: Squares2X2Icon },
-  { href: '/mcq', label: 'MCQ Practice', icon: QuestionMarkCircleIcon },
-  { href: '/flashcards', label: 'Flashcards', icon: RectangleStackIcon },
+  // Removed Summarize/MCQ/Flashcards here; available inside individual courses
 ]
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  // Use SSR-safe defaults; sync from localStorage after mount to avoid hydration mismatch
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [user, setUser] = useState<{ name?: string; email?: string } | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
+  // Remove initial loader flash by applying class synchronously on mount
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? (localStorage.getItem('theme') as 'dark' | 'light' | null) : null
-    if (saved) setTheme(saved)
+    // On mount, initialize theme from localStorage or current document class
+    try{
+      const saved = (localStorage.getItem('theme') as 'dark' | 'light' | null)
+      const initial = saved ?? (document.documentElement.classList.contains('light') ? 'light' : 'dark')
+      setTheme(initial)
+      document.documentElement.classList.toggle('light', initial === 'light')
+    }catch{}
   }, [])
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      if (theme === 'light') document.documentElement.classList.add('light')
-      else document.documentElement.classList.remove('light')
+      document.documentElement.classList.toggle('light', theme === 'light')
       localStorage.setItem('theme', theme)
-  // expose setter for children (e.g., settings page)
-  ;(window as any).setAppTheme = (mode: 'light'|'dark') => setTheme(mode)
+      // expose setter for children (e.g., settings page)
+      ;(window as any).setAppTheme = (mode: 'light'|'dark') => setTheme(mode)
     }
   }, [theme])
 
@@ -100,25 +105,65 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('click', onDocClick)
   }, [])
 
+  // Persist sidebar state
+  useEffect(() => {
+    try { localStorage.setItem('sidebarOpen', String(sidebarOpen)) } catch {}
+  }, [sidebarOpen])
+
+  // Sync sidebar state from localStorage after mount to match user preference
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sidebarOpen')
+      if (saved !== null) setSidebarOpen(saved === 'true')
+    } catch {}
+  }, [])
+
   return (
     <html lang="en">
       <body>
+        {/* Prevent theme flicker: set initial class based on localStorage before React mounts */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.add('light')}else{document.documentElement.classList.remove('light')}}catch(e){}",
+          }}
+        />
         <SWRConfig value={{ fetcher: (url: string) => fetch(url).then(r=>r.json()), revalidateOnFocus: false, dedupingInterval: 1500 }}>
         <ToastProvider>
-        <div className="min-h-screen grid grid-cols-12">
-          <aside className="col-span-2 p-4 border-r border-white/10 bg-card bg-opacity-50 backdrop-blur">
-            <div className="text-2xl font-bold mb-6">Learnova</div>
+        <div className="min-h-screen flex">
+          <aside className={`${sidebarOpen ? 'w-64' : 'w-14 md:w-14'} p-3 border-r border-white/10 bg-card bg-opacity-50 backdrop-blur transition-all duration-200 overflow-hidden`}>
+            <div className="flex items-center gap-2 mb-6">
+              <button
+                className="w-10 h-10 flex items-center justify-center rounded hover:bg-white/10"
+                onClick={()=>setSidebarOpen(v=>!v)}
+                aria-label="Toggle sidebar"
+                title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              >
+                <Bars3Icon className="w-6 h-6 shrink-0" />
+              </button>
+              {sidebarOpen && <div className="text-2xl font-bold">Learnova</div>}
+            </div>
             <nav className="space-y-1">
               {links.map(l => (
-                <Link key={l.href} href={l.href} className={clsx('sidebar-link', pathname === l.href && 'active')}>
-                  <l.icon className="w-5 h-5" />
-                  <span>{l.label}</span>
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={clsx(
+                    'sidebar-link',
+                    sidebarOpen ? 'flex pl-1 pr-3 py-2 gap-2' : 'flex w-10 h-10 items-center justify-center',
+                    pathname === l.href && 'active'
+                  )}
+                >
+                  <span className={clsx('inline-flex items-center justify-center shrink-0', sidebarOpen ? 'w-8 h-8' : 'w-6 h-6') }>
+                    <l.icon className="w-6 h-6 shrink-0" />
+                  </span>
+                  {sidebarOpen && <span>{l.label}</span>}
                 </Link>
               ))}
             </nav>
             {/* Theme toggle moved to Settings page */}
           </aside>
-          <main className="col-span-10">
+          <main className="flex-1">
             {/* Topbar with search (left) and user menu (right) */}
             <div className="flex items-center justify-between gap-3 p-3 border-b border-white/10 bg-card bg-opacity-30 backdrop-blur sticky top-0 z-40">
               <form className="hidden md:flex items-center bg-white/5 rounded-full px-3 py-2 w-[420px] border border-white/10">
@@ -136,8 +181,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   </button>
                   {menuOpen && (
                     <div className="absolute right-0 mt-2 w-44 rounded-md border border-white/10 bg-card shadow-lg z-50">
-                      <a href="/profile" className="block px-3 py-2 text-sm hover:bg-white/10">Profile</a>
-                      <a href="/settings" className="block px-3 py-2 text-sm hover:bg-white/10">Settings</a>
+                      <Link href="/profile" className="block px-3 py-2 text-sm hover:bg-white/10">Profile</Link>
+                      <Link href="/settings" className="block px-3 py-2 text-sm hover:bg-white/10">Settings</Link>
                       <button className="w-full text-left px-3 py-2 text-sm hover:bg-white/10" onClick={signOut}>Sign out</button>
                     </div>
                   )}

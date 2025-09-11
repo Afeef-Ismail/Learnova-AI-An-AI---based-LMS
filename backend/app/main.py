@@ -17,7 +17,7 @@ from .mcq.stats import get_stats as mcq_get_stats
 from .core.database import init_db, get_session
 from .workers.celery_app import celery_app
 from .flashcards.service import generate_flashcards, next_flashcard, grade_flashcard, flashcard_stats, get_flashcard, list_flashcards
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from .models.db_models import Course, MCQQuestion, MCQAttempt, Summary, Flashcard, ChatMessage, User
 import time, hmac, hashlib, base64, json as pyjson
 import httpx
@@ -28,10 +28,43 @@ load_dotenv()
 
 app = FastAPI(title="Learnova AI Backend", version="0.1.0")
 
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", os.getenv("NEXT_PUBLIC_FRONTEND_ORIGIN", "http://localhost:3001"))
+# CORS: allow a configurable set of frontend origins. Prefer a strict list but
+# be tolerant in local dev by including common localhost variants.
+_origins_env = os.getenv("FRONTEND_ORIGINS")
+if _origins_env:
+    ALLOW_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
+else:
+    _base_origin = os.getenv("FRONTEND_ORIGIN", os.getenv("NEXT_PUBLIC_FRONTEND_ORIGIN", "http://localhost:3001"))
+    ALLOW_ORIGINS = {_base_origin}
+    try:
+        # Expand localhost -> 127.0.0.1 variant, and common 3000/3001 ports for Next.js dev/prod
+        import urllib.parse as _urlparse
+        p = _urlparse.urlparse(_base_origin)
+        if p.scheme in ("http", "https") and p.hostname:
+            host_variants = {p.hostname}
+            if p.hostname == "localhost":
+                host_variants.add("127.0.0.1")
+            elif p.hostname == "127.0.0.1":
+                host_variants.add("localhost")
+            ports = {p.port} if p.port else {3000, 3001}
+            # If one of 3000/3001 is present, include the other as well for convenience
+            if 3000 in ports or 3001 in ports:
+                ports.update({3000, 3001})
+            for h in host_variants:
+                for prt in ports:
+                    ALLOW_ORIGINS.add(f"{p.scheme}://{h}:{prt}")
+    except Exception:
+        # Best-effort; fall back to the single configured origin
+        pass
+    ALLOW_ORIGINS = sorted(ALLOW_ORIGINS)
+
+# Optionally allow localhost variants via regex (handy in dev). You can override with ALLOW_ORIGIN_REGEX env.
+_origin_regex = os.getenv("ALLOW_ORIGIN_REGEX", r"^https?://(localhost|127\.0\.0\.1)(:\\d+)?$")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=ALLOW_ORIGINS,
+    allow_origin_regex=_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -401,7 +434,7 @@ async def models_pull(body: dict):
 
 @app.post("/chat")
 async def chat(body: ChatRequest):
-    model = body.model or os.getenv("LLM_MODEL", "llama3:8b")
+    model = body.model or os.getenv("LLM_MODEL", "llama3.2:3b")
     try:
         text = await generate(body.prompt, model=model, temperature=(body.temperature or 0.2))
     except OllamaError as e:
@@ -559,14 +592,14 @@ async def chat_edu(body: ChatEduRequest, _rl=Depends(rate_limiter(_env_int("RL_C
         latest_user = body.prompt
     if not latest_user:
         raise HTTPException(status_code=400, detail="prompt or messages with a user turn is required")
-    model = body.model or os.getenv("LLM_MODEL", "llama3:8b")
+    model = body.model or os.getenv("LLM_MODEL", "llama3.2:3b")
     temperature = (body.temperature or 0.2)
     # Strong system instruction (includes general knowledge but excludes practical cooking how-tos)
     today = time.strftime("%Y-%m-%d")
     instruction = (
         "System: You are Learnova, a helpful tutor for education, general knowledge, mathematics, and technology. "
         "General knowledge includes history, geography, science facts, sports records, notable people, world facts, and current affairs basics. "
-        f"Answer concisely and accurately; for time-sensitive facts (e.g., current leaders or records), include a brief 'as of {today}' note and proceed. "
+        "Answer concisely and accurately. "
         "Do not provide practical cooking or recipe instructions (e.g., 'how to make noodles'); instead, offer an educational angle such as food science (Maillard reaction), nutrition basics, or cultural history. "
         "Politely refuse clearly inappropriate requests (e.g., explicit content, personal gossip, self-harm, illegal activity, or detailed medical/legal/financial advice). "
         "Style: be clear and concise; explain step-by-step for math/problems; include short definitions, formulas, and 1-2 key insights; show small code snippets when technical. "
@@ -626,7 +659,7 @@ async def chat_edu_stream(body: ChatEduStreamRequest, _rl=Depends(rate_limiter(_
     instruction = (
         "System: You are Learnova, a helpful tutor for education, general knowledge, mathematics, and technology. "
         "General knowledge includes history, geography, science facts, sports records, notable people, world facts, and current affairs basics. "
-        f"Answer concisely and accurately; for time-sensitive facts (e.g., current leaders or records), include a brief 'as of {today}' note and proceed. "
+        "Answer concisely and accurately. "
         "Do not provide practical cooking or recipe instructions (e.g., 'how to make noodles'); instead, offer an educational angle such as food science (Maillard reaction), nutrition basics, or cultural history. "
         "Politely refuse clearly inappropriate requests (e.g., explicit content, personal gossip, self-harm, illegal activity, or detailed medical/legal/financial advice). "
         "Style: be clear and concise; explain step-by-step for math/problems; include short definitions, formulas, and 1-2 key insights; show small code snippets when technical."
@@ -657,7 +690,7 @@ async def chat_edu_stream(body: ChatEduStreamRequest, _rl=Depends(rate_limiter(_
     else:
         full_prompt = f"{instruction}\n\nUser: {_truncate(latest_user)}\nAssistant:"
 
-    model = body.model or os.getenv("LLM_MODEL", "llama3:8b")
+    model = body.model or os.getenv("LLM_MODEL", "llama3.2:3b")
     temperature = (body.temperature or 0.2)
 
     async def token_gen():
@@ -665,7 +698,15 @@ async def chat_edu_stream(body: ChatEduStreamRequest, _rl=Depends(rate_limiter(_
             # Stream plain text chunks
             yield chunk.encode()
 
-    return StreamingResponse(token_gen(), media_type="text/plain")
+    # Hint proxies/browsers not to buffer to preserve chunked updates
+    return StreamingResponse(
+        token_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 @app.post("/embed")
 async def embeddings(body: EmbedRequest, _rl=Depends(rate_limiter(_env_int("RL_EMBED", 60), _env_int("RL_EMBED_WINDOW", 60)))):
@@ -725,6 +766,22 @@ async def chat_history(course_id: str, limit: int = 50, offset: int = 0):
             select(ChatMessage).where(ChatMessage.course_id == course.id).order_by(desc(ChatMessage.created_at)).limit(limit).offset(offset)
         )).scalars().all()
         return {"items": [{"id": m.id, "q": m.question, "a": m.answer, "t": m.created_at.isoformat()} for m in rows], "total": total}
+
+@app.delete("/chat/history")
+async def chat_history_delete(course_id: str, id: int):
+    """Delete a single chat message by id for the given course_id (course_key)."""
+    async for session in get_session():
+        # Resolve course
+        cr = await session.execute(select(Course).where(Course.course_key == course_id))
+        course = cr.scalar_one_or_none()
+        if not course:
+            return {"status": "ok", "deleted": 0}
+        # Delete message scoped to course
+        await session.execute(
+            delete(ChatMessage).where(ChatMessage.course_id == course.id, ChatMessage.id == id)
+        )
+        await session.commit()
+        return {"status": "ok", "deleted": 1}
 
 @app.post("/summaries/course")
 async def summarize_course(body: SummarizeRequest, _rl=Depends(rate_limiter(_env_int("RL_SUMMARY", 20), _env_int("RL_SUMMARY_WINDOW", 60)))):
